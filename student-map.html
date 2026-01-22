@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>College Bus Live Tracking</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    #controls {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      width: 220px;
+    }
+
+    #map {
+      height: 80vh;
+      width: 100%;
+    }
+
+    #status {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>🚌 College Bus Live Tracking</h2>
+
+<div id="controls">
+  <input id="busNumber" placeholder="Enter Bus Number (e.g., BUS_21)" />
+  <button onclick="startTracking()">Track Bus</button>
+</div>
+
+<div id="map"></div>
+<div id="status"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* ==============================
+   🔧 CONFIGURATION
+   ============================== */
+
+const API_URL = "https://a613dmarbe.execute-api.us-east-1.amazonaws.com/prod/bus";
+
+// 📍 YOUR ACTUAL BUS STOP
+const STOP_LAT = 12.929611;
+const STOP_LNG = 80.202750;
+
+// 🚌 Average bus speed (km/h)
+const BUS_SPEED_KMPH = 25;
+
+/* ==============================
+   GLOBAL VARIABLES
+   ============================== */
+
+let map;
+let busMarker;
+let refreshTimer;
+
+/* ==============================
+   INITIALIZE MAP
+   ============================== */
+
+function initMap() {
+  map = L.map("map").setView([STOP_LAT, STOP_LNG], 15);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
+
+  // Bus marker
+  busMarker = L.marker([STOP_LAT, STOP_LNG]).addTo(map);
+
+  // Student stop marker
+  L.marker([STOP_LAT, STOP_LNG])
+    .addTo(map)
+    .bindPopup("Your Bus Stop")
+    .openPopup();
+}
+
+/* ==============================
+   START TRACKING
+   ============================== */
+
+function startTracking() {
+  const busNumber = document.getElementById("busNumber").value.trim();
+
+  if (!busNumber) {
+    alert("Please enter a bus number");
+    return;
+  }
+
+  if (!map) initMap();
+
+  fetchBus(busNumber);
+
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => fetchBus(busNumber), 15000);
+}
+
+/* ==============================
+   FETCH BUS DATA
+   ============================== */
+
+function fetchBus(busNumber) {
+  fetch(`${API_URL}?busNumber=${busNumber}`)
+    .then(res => res.json())
+    .then(data => {
+
+      if (
+        !data ||
+        data.latitude === null ||
+        data.longitude === null
+      ) {
+        document.getElementById("status").innerText =
+          "Bus location not available yet";
+        return;
+      }
+
+      // 🔑 FORCE NUMBERS (ETA FIX)
+      const lat = Number(data.latitude);
+      const lng = Number(data.longitude);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        document.getElementById("status").innerText =
+          "Invalid bus location data";
+        return;
+      }
+
+      // Move marker
+      busMarker.setLatLng([lat, lng]);
+      map.setView([lat, lng]);
+
+      // Distance & ETA
+      const distanceKm = getDistanceKm(lat, lng, STOP_LAT, STOP_LNG);
+
+      if (isNaN(distanceKm)) {
+        document.getElementById("status").innerText =
+          "ETA not available yet";
+        return;
+      }
+
+      const etaMinutes = Math.max(
+        1,
+        Math.round((distanceKm / BUS_SPEED_KMPH) * 60)
+      );
+
+      document.getElementById("status").innerText =
+        `📍 Bus ${busNumber} is ${distanceKm.toFixed(2)} km away | ⏱ ETA: ${etaMinutes} min`;
+    })
+    .catch(() => {
+      document.getElementById("status").innerText =
+        "Error fetching bus data";
+    });
+}
+
+/* ==============================
+   HAVERSINE DISTANCE FUNCTION
+   ============================== */
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+</script>
+
+</body>
+</html>

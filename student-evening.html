@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Evening Bus Parking – Campus View</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    #controls {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      width: 220px;
+    }
+
+    #map {
+      height: 80vh;
+      width: 100%;
+    }
+
+    #status {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>🅿️ Evening Bus Parking (Campus)</h2>
+
+<div id="controls">
+  <input id="busNumber" placeholder="Enter Bus Number (e.g., BUS_21)" />
+  <button onclick="findBus()">Find Bus</button>
+</div>
+
+<div id="map"></div>
+<div id="status"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* ==============================
+   🔧 CONFIGURATION
+   ============================== */
+
+const API_URL = "https://a613dmarbe.execute-api.us-east-1.amazonaws.com/prod/bus";
+
+/* CAMPUS PARKING ZONES */
+const PARKING_ZONES = {
+  ENG_BAY: {
+    name: "Engineering Bus Bay",
+    lat: 12.8695,
+    lng: 80.2189
+  },
+  ENG_ENTRY: {
+    name: "Engineering Campus Entrance",
+    lat: 12.8706,
+    lng: 80.2172
+  },
+  MID_PATH: {
+    name: "Between Engineering & Technology",
+    lat: 12.8688,
+    lng: 80.2196
+  },
+  TECH_BAY: {
+    name: "Technology Bus Bay",
+    lat: 12.8674,
+    lng: 80.2208
+  },
+  TECH_ENTRY: {
+    name: "Technology Campus Entrance",
+    lat: 12.8662,
+    lng: 80.2219
+  }
+};
+
+let map;
+let marker;
+
+/* ==============================
+   INITIALIZE MAP
+   ============================== */
+
+function initMap(lat = 12.8695, lng = 80.2195) {
+  map = L.map("map").setView([lat, lng], 17);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
+
+  marker = L.marker([lat, lng]).addTo(map);
+}
+
+/* ==============================
+   FIND BUS PARKING
+   ============================== */
+
+function findBus() {
+  const busNumber = document.getElementById("busNumber").value.trim();
+
+  if (!busNumber) {
+    alert("Please enter a bus number");
+    return;
+  }
+
+  if (!map) initMap();
+
+  fetch(`${API_URL}?busNumber=${busNumber}`)
+    .then(res => res.json())
+    .then(data => {
+
+      if (!data || data.status !== "PARKED") {
+        document.getElementById("status").innerText =
+          "Bus is not parked yet";
+        return;
+      }
+
+      const zone = PARKING_ZONES[data.parkingZone];
+
+      if (!zone) {
+        document.getElementById("status").innerText =
+          "Parking location unknown";
+        return;
+      }
+
+      marker.setLatLng([zone.lat, zone.lng]);
+      map.setView([zone.lat, zone.lng]);
+
+      document.getElementById("status").innerText =
+        `🅿️ Bus ${busNumber} is parked at ${zone.name}`;
+    })
+    .catch(() => {
+      document.getElementById("status").innerText =
+        "Error fetching bus data";
+    });
+}
+</script>
+
+</body>
+</html>

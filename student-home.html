@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>College Bus Tracking</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 80px;
+      background: #f4f6f8;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      margin: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🚌 College Bus Tracking System</h1>
+
+<button onclick="goMorning()">🌅 Morning – Track Bus</button>
+<br>
+<button onclick="goEvening()">🌙 Evening – Find Parked Bus</button>
+
+<script>
+function goMorning() {
+  window.location.href = "student-map.html";
+}
+
+function goEvening() {
+  window.location.href = "student-evening.html";
+}
+</script>
+
+</body>
+</html>
